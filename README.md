@@ -26,7 +26,7 @@ Set the "Simulated API latency" slider above zero: Open-Meteo answers in about
 | Where | Primitive | What to watch |
 |---|---|---|
 | Forecast tab, swell and wind cards | `reactiveAsync()` x 2 | Two independent fetches start together on two workers. Change the spot while they run: the old requests are cancelled, the badges go orange, and the previous forecast stays on screen with a "showing previous forecast" note. |
-| Surf score card | chained `reactiveAsync()` | Reads both fetches. It halts until both have a value, and a `req()` inside the worker keeps the previous score until both describe the same spot. |
+| Surf score card | chained `reactiveAsync()` | Reads both fetches as a plain `reactive()` would. It halts until both have a value, and keeps the previous score while the fetches catch up with a new spot. |
 | Sidebar simulation buttons | `bindEvent()` + `cancel_async()` | The Monte Carlo band only runs on the button. Cancel stops the worker and keeps the last band. Buttons enable and disable from `status_async()`. |
 | "Right now" tile | `invalidateLater()` inside an async | Refetches current conditions every 60 s in the background. |
 | How it works tab, cache table | `observeAsync()` | Writes each scored forecast to `cache/` from the worker. A `reactivePoll()` lists the files. |
@@ -42,12 +42,15 @@ Set the "Simulated API latency" slider above zero: Open-Meteo answers in about
   `status_async(sim) == "success"`" therefore never starts the task. Read it
   unconditionally and catch the `shiny.silent.error` halt when there is no
   value yet (see `sim_band` in `app.R`).
-- **Tag results with what they were computed for.** With stale-while-revalidate,
-  a chained reactive can briefly see new input alongside an old upstream value.
-  The fetches set `attr(x, "spot")` and the score checks it with `req()`.
-- **Raw mirai ships nothing for you.** Functions passed in a list still carry
-  their session environment, which the worker does not have. Reassign their
-  environment inside the mirai expression before calling them.
+- **Chains need no guard.** With stale-while-revalidate an upstream returns its
+  previous value while it recomputes, but a downstream `reactiveAsync()` waits
+  for it to catch up with its own inputs, so the score never pairs a new spot
+  with the old spot's wind. Tagging a result with `attr(s, "spot")` is still
+  useful for outputs that combine results from different tasks, as the
+  simulation band and the compare verdict do.
+- **Use `mirai_async()` for a raw task.** A bare `mirai::mirai()` ships only
+  what you hand it; `mirai_async()` ships the helpers an expression calls,
+  as `reactiveAsync()` does.
 
 ## Files
 

@@ -127,27 +127,21 @@ server <- function(input, output, session) {
   #    cancels the in-flight requests (mode = "latest").
   marine <- reactiveAsync({
     sp <- get_spot(input$spot)
-    m  <- fetch_marine(sp$lat, sp$lon, input$days, delay = input$delay)
-    attr(m, "spot") <- sp$id
-    m
+    fetch_marine(sp$lat, sp$lon, input$days, delay = input$delay)
   }, label = "marine")
 
   wind <- reactiveAsync({
     sp <- get_spot(input$spot)
-    w  <- fetch_wind(sp$lat, sp$lon, input$days, delay = input$delay)
-    attr(w, "spot") <- sp$id
-    w
+    fetch_wind(sp$lat, sp$lon, input$days, delay = input$delay)
   }, label = "wind")
 
-  # 2. A chained async reactive. It depends on the two above; while they have
-  #    no value yet it halts like req(). The req() below runs in the worker
-  #    (it uses variables made inside the expression), so a mismatch keeps the
-  #    previous score instead of scoring one spot with another's wind.
+  # 2. A chained async reactive, written as a plain reactive() would be. While
+  #    the fetches are catching up with a new spot it keeps the previous score
+  #    rather than scoring one spot with another's wind, then re-runs once
+  #    both have settled.
   scored <- reactiveAsync({
     sp <- get_spot(input$spot)
-    m <- marine(); w <- wind()
-    req(identical(attr(m, "spot"), sp$id), identical(attr(w, "spot"), sp$id))
-    s <- score_hours(m, w, sp)
+    s <- score_hours(marine(), wind(), sp)
     attr(s, "spot") <- sp$id
     s
   }, label = "score")
@@ -336,7 +330,7 @@ server <- function(input, output, session) {
       tags$dt(class = "col-sm-4", code("reactiveAsync()"), " × 2"),
       tags$dd(class = "col-sm-8", "Marine and wind fetches. Independent, so they run on two workers at once. Change the spot mid-flight and the old requests are cancelled."),
       tags$dt(class = "col-sm-4", "Chained ", code("reactiveAsync()")),
-      tags$dd(class = "col-sm-8", "The score reads both fetches. It halts until both have a value and keeps the previous score until both describe the same spot."),
+      tags$dd(class = "col-sm-8", "The score reads both fetches as a plain reactive() would. shinyasync keeps the previous score while the fetches catch up with a new spot, then re-runs it."),
       tags$dt(class = "col-sm-4", code("bindEvent()"), " + ", code("cancel_async()")),
       tags$dd(class = "col-sm-8", "The Monte Carlo simulation only runs on the button. Cancel stops the worker and keeps the last band."),
       tags$dt(class = "col-sm-4", code("invalidateLater()")),
