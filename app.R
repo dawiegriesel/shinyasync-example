@@ -89,8 +89,8 @@ ui <- page_navbar(
       col_widths = c(4, 8),
       card(
         card_header("Fan-out task"),
-        p("Fetches and scores all", nrow(spots), "spots in a single raw",
-          code("mirai::mirai()"), "and hands it to a", code("reactiveValAsync()"), "."),
+        p("Fetches and scores all", nrow(spots), "spots in one task started with",
+          code("mirai_async()"), "and set on a", code("reactiveValAsync()"), "."),
         actionButton("rank", "Rank spots for the next 3 days", icon = icon("play"),
                      class = "btn-primary"),
         uiOutput("rank_status")
@@ -117,7 +117,8 @@ ui <- page_navbar(
 # ---- Server -----------------------------------------------------------------
 
 server <- function(input, output, session) {
-  pool_async(workers = 4)              # shared by every session in this process
+  pool_async(workers = 4)              # optional: the first task would start a default
+                                       # pool; this sizes it for every session in the process
 
   days <- reactive(input$days)
 
@@ -192,19 +193,11 @@ server <- function(input, output, session) {
                  written = format(file.info(f)$mtime, "%H:%M:%S"), row.names = NULL)
     })
 
-  # 6. Manual control: a reactiveValAsync() fed by a raw mirai. A raw mirai
-  #    ships only what you hand it, so the helper functions go across
-  #    explicitly and are re-homed in the worker's evaluation environment.
+  # 6. Manual control: a reactiveValAsync() set from an observer. mirai_async()
+  #    ships rank_spots() and every helper it calls, like reactiveAsync() does.
   ranking <- reactiveValAsync()
-  helpers <- mget(c("rank_spots", "score_hours", "fetch_marine", "fetch_wind", "om_get",
-                    "parse_time", "height_score", "period_score", "direction_score",
-                    "wind_score", "angle_diff", "wind_type", "combine_score"), inherits = TRUE)
   observe({
-    ranking(mirai::mirai({
-      e <- environment()
-      for (nm in names(helpers)) { f <- helpers[[nm]]; environment(f) <- e; assign(nm, f, e) }
-      rank_spots(spots, days)
-    }, helpers = helpers, spots = spots, days = 3))
+    ranking(mirai_async(rank_spots(spots, days = 3)))
   }) |> bindEvent(input$rank)
 
   # 7. Modules, each returning its async reactive.
@@ -351,13 +344,13 @@ server <- function(input, output, session) {
       tags$dt(class = "col-sm-4", code("observeAsync()")),
       tags$dd(class = "col-sm-8", "Writes each scored forecast to the cache directory from the worker; nothing reads its result."),
       tags$dt(class = "col-sm-4", code("reactiveValAsync()")),
-      tags$dd(class = "col-sm-8", "The ranking is a raw mirai assigned to an async reactive value. Pressing the button again supersedes a running one."),
+      tags$dd(class = "col-sm-8", "The ranking is a mirai_async() task set on an async reactive value. Pressing the button again supersedes a running one."),
       tags$dt(class = "col-sm-4", "Modules"),
       tags$dd(class = "col-sm-8", "The Compare tab mounts one module twice; each returns its async reactive to the parent."),
       tags$dt(class = "col-sm-4", code("status_async()")),
       tags$dd(class = "col-sm-8", "Drives every badge, the task monitor, the disabled buttons and the 'stale' note."),
       tags$dt(class = "col-sm-4", code("pool_async()")),
-      tags$dd(class = "col-sm-8", "Four local mirai daemons shared by every session of this process. Open the app in a second tab: it is never blocked by the first.")
+      tags$dd(class = "col-sm-8", "Optional: the first task would start a default pool. This app sizes it to four local daemons shared by every session of this process. Open the app in a second tab: it is never blocked by the first.")
     )
   ))
 }

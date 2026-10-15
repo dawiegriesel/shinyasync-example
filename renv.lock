@@ -2288,7 +2288,7 @@
     },
     "shinyasync": {
       "Package": "shinyasync",
-      "Version": "0.1.0",
+      "Version": "0.1.0.9000",
       "Source": "GitHub",
       "Title": "Async Shiny Reactives on 'mirai'",
       "Authors@R": "person(\"Dawie\", \"Griesel\", , \"dawiegr@gmail.com\", role = c(\"aut\", \"cre\"))",
@@ -2322,7 +2322,7 @@
       "RemoteUsername": "dawiegriesel",
       "RemoteRepo": "shinyasync",
       "RemoteRef": "main",
-      "RemoteSha": "d60c8878bd914bd1b51b6c44c2276374cb55a664"
+      "RemoteSha": "b976d1500f219cfb25a487712d846ae263960761"
     },
     "sourcetools": {
       "Package": "sourcetools",

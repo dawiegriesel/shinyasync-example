@@ -30,10 +30,10 @@ Set the "Simulated API latency" slider above zero: Open-Meteo answers in about
 | Sidebar simulation buttons | `bindEvent()` + `cancel_async()` | The Monte Carlo band only runs on the button. Cancel stops the worker and keeps the last band. Buttons enable and disable from `status_async()`. |
 | "Right now" tile | `invalidateLater()` inside an async | Refetches current conditions every 60 s in the background. |
 | How it works tab, cache table | `observeAsync()` | Writes each scored forecast to `cache/` from the worker. A `reactivePoll()` lists the files. |
-| Rank all spots tab | `reactiveValAsync()` fed by a raw `mirai::mirai()` | Fetches and scores all ten spots in one worker. A raw mirai ships only what you hand it, so the helper functions are passed explicitly and re-homed in the worker. |
+| Rank all spots tab | `reactiveValAsync()` set from `mirai_async()` | Fetches and scores all ten spots in one worker. `mirai_async()` ships `rank_spots()` and every helper it calls, so nothing is listed by hand. |
 | Compare tab | modules | One module mounted twice, each returning its async reactive to the parent, which combines them in the verdict. |
 | Sidebar task monitor | `status_async()` and `$status()` | Live status of every task in the app. |
-| `server()` | `pool_async(workers = 4)` | One daemon pool for every session in the process. |
+| `server()` | `pool_async(workers = 4)` | Optional: the first task would start a default pool. This call sizes it for every session in the process. |
 
 ## Lessons learned building this
 
