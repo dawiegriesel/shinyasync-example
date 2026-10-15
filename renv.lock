@@ -2288,7 +2288,7 @@
     },
     "shinyasync": {
       "Package": "shinyasync",
-      "Version": "0.1.0.9000",
+      "Version": "0.2.0",
       "Source": "GitHub",
       "Title": "Async Shiny Reactives on 'mirai'",
       "Authors@R": "person(\"Dawie\", \"Griesel\", , \"dawiegr@gmail.com\", role = c(\"aut\", \"cre\"))",
@@ -2300,6 +2300,7 @@
         "R (>= 4.1)"
       ],
       "Imports": [
+        "cli",
         "codetools",
         "later",
         "mirai (>= 2.0.0)",
@@ -2308,9 +2309,13 @@
         "shiny (>= 1.8.1)"
       ],
       "Suggests": [
+        "jsonlite",
+        "knitr",
+        "rmarkdown",
         "testthat (>= 3.0.0)",
         "withr"
       ],
+      "VignetteBuilder": "knitr",
       "Config/testthat/edition": "3",
       "Encoding": "UTF-8",
       "Roxygen": "list(markdown = TRUE)",
@@ -2321,8 +2326,8 @@
       "RemoteHost": "api.github.com",
       "RemoteUsername": "dawiegriesel",
       "RemoteRepo": "shinyasync",
-      "RemoteRef": "main",
-      "RemoteSha": "b976d1500f219cfb25a487712d846ae263960761"
+      "RemoteRef": "v0.2.0",
+      "RemoteSha": "ba5d74f4638049d13bb99da9f2e33a05fac511e1"
     },
     "sourcetools": {
       "Package": "sourcetools",
