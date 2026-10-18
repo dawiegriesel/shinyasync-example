@@ -1,14 +1,15 @@
 # Open-Meteo helpers. No API key needed.
 #
-# Both functions are plain top-level functions, so shinyasync ships them to the
-# mirai worker automatically. Everything inside uses package-qualified calls so
-# they also work when passed to a raw mirai::mirai().
+# All functions are plain top-level functions, so shinyasync ships them to the
+# mirai worker automatically. Everything inside uses package-qualified calls.
+# `om_base` is not defined here: it is the request template that
+# pool_async(everywhere = ) in app.R creates on every worker, so om_get() only
+# works on the pool, through reactiveAsync(), observeAsync() or mirai_async().
 
 om_get <- function(url, query) {
-  resp <- httr2::request(url) |>
+  resp <- om_base |>
+    httr2::req_url(url) |>
     httr2::req_url_query(!!!query) |>
-    httr2::req_user_agent("shinyasync-surf-example") |>
-    httr2::req_timeout(20) |>
     httr2::req_perform()
   out <- httr2::resp_body_json(resp, simplifyVector = TRUE)
   if (isTRUE(out$error)) stop("Open-Meteo: ", out$reason)

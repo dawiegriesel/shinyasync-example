@@ -16,6 +16,18 @@ library(plotly)
 dir.create("cache", showWarnings = FALSE)
 cache_dir <- normalizePath("cache")                      # plain object: shipped to workers
 
+# ---- Pool -------------------------------------------------------------------
+# One pool per process, started before any session so the preload runs once and
+# the workers live until the app stops. The `everywhere` expression runs on
+# every worker: om_base is resident there, and every Open-Meteo call in R/api.R
+# builds on it instead of configuring a request per call.
+pool_async(workers = 4, everywhere = {
+  om_base <- httr2::request("https://api.open-meteo.com") |>
+    httr2::req_user_agent("shinyasync-surf-example") |>
+    httr2::req_timeout(20) |>
+    httr2::req_retry(max_tries = 3)
+})
+
 # ---- UI ---------------------------------------------------------------------
 
 ui <- page_navbar(
@@ -117,9 +129,6 @@ ui <- page_navbar(
 # ---- Server -----------------------------------------------------------------
 
 server <- function(input, output, session) {
-  pool_async(workers = 4)              # optional: the first task would start a default
-                                       # pool; this sizes it for every session in the process
-
   days <- reactive(input$days)
 
   # 1. Two independent fetches. Both start the moment the spot changes and run
@@ -147,7 +156,9 @@ server <- function(input, output, session) {
   }, label = "score")
 
   # 3. Button-triggered heavy work with a cancel button. bindEvent() isolates
-  #    everything inside, so only the button re-runs it.
+  #    everything inside, so only the button re-runs it. Pressed while the
+  #    fetches are still running, the click holds and the simulation runs once
+  #    the score has caught up.
   sim <- reactiveAsync({
     s <- simulate_scores(scored(), get_spot(input$spot), n = input$nsim, delay = input$delay)
     attr(s, "spot") <- input$spot
@@ -203,7 +214,7 @@ server <- function(input, output, session) {
     rows <- list(
       c("marine fetch",      status_async(marine)),
       c("wind fetch",        status_async(wind)),
-      c("score (chained)",   status_async(scored)),
+      c("score (chained)",   status_async(scored)),   # "running" while its fetches run too
       c("simulation (button)", status_async(sim)),
       c("right now (60 s)",  status_async(now)),
       c("cache observer",    cache_writer$status()),
@@ -330,9 +341,9 @@ server <- function(input, output, session) {
       tags$dt(class = "col-sm-4", code("reactiveAsync()"), " × 2"),
       tags$dd(class = "col-sm-8", "Marine and wind fetches. Independent, so they run on two workers at once. Change the spot mid-flight and the old requests are cancelled."),
       tags$dt(class = "col-sm-4", "Chained ", code("reactiveAsync()")),
-      tags$dd(class = "col-sm-8", "The score reads both fetches as a plain reactive() would. shinyasync keeps the previous score while the fetches catch up with a new spot, then re-runs it."),
+      tags$dd(class = "col-sm-8", "The score reads both fetches as a plain reactive() would. shinyasync keeps the previous score while the fetches catch up with a new spot, reports it as running meanwhile, then re-runs it."),
       tags$dt(class = "col-sm-4", code("bindEvent()"), " + ", code("cancel_async()")),
-      tags$dd(class = "col-sm-8", "The Monte Carlo simulation only runs on the button. Cancel stops the worker and keeps the last band."),
+      tags$dd(class = "col-sm-8", "The Monte Carlo simulation only runs on the button. Pressed while the fetches are still running, it waits for the score and then runs. Cancel stops the worker and keeps the last band."),
       tags$dt(class = "col-sm-4", code("invalidateLater()")),
       tags$dd(class = "col-sm-8", "The 'right now' tile refetches every 60 s in the background."),
       tags$dt(class = "col-sm-4", code("observeAsync()")),
@@ -343,8 +354,8 @@ server <- function(input, output, session) {
       tags$dd(class = "col-sm-8", "The Compare tab mounts one module twice; each returns its async reactive to the parent."),
       tags$dt(class = "col-sm-4", code("status_async()")),
       tags$dd(class = "col-sm-8", "Drives every badge, the task monitor, the disabled buttons and the 'stale' note."),
-      tags$dt(class = "col-sm-4", code("pool_async()")),
-      tags$dd(class = "col-sm-8", "Optional: the first task would start a default pool. This app sizes it to four local daemons shared by every session of this process. Open the app in a second tab: it is never blocked by the first.")
+      tags$dt(class = "col-sm-4", code("pool_async(everywhere = )")),
+      tags$dd(class = "col-sm-8", "Optional: the first task would start a default pool. This app starts four local daemons at the top of app.R, shared by every session of this process, and preloads each worker with a configured Open-Meteo request that every fetch builds on. Open the app in a second tab: it is never blocked by the first.")
     )
   ))
 }

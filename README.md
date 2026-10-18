@@ -26,14 +26,14 @@ Set the "Simulated API latency" slider above zero: Open-Meteo answers in about
 | Where | Primitive | What to watch |
 |---|---|---|
 | Forecast tab, swell and wind cards | `reactiveAsync()` x 2 | Two independent fetches start together on two workers. Change the spot while they run: the old requests are cancelled, the badges go orange, and the previous forecast stays on screen with a "showing previous forecast" note. |
-| Surf score card | chained `reactiveAsync()` | Reads both fetches as a plain `reactive()` would. It halts until both have a value, and keeps the previous score while the fetches catch up with a new spot. |
-| Sidebar simulation buttons | `bindEvent()` + `cancel_async()` | The Monte Carlo band only runs on the button. Cancel stops the worker and keeps the last band. Buttons enable and disable from `status_async()`. |
+| Surf score card | chained `reactiveAsync()` | Reads both fetches as a plain `reactive()` would. It halts until both have a value, and keeps the previous score while the fetches catch up with a new spot. Its badge reads "running" for as long as either fetch does. |
+| Sidebar simulation buttons | `bindEvent()` + `cancel_async()` | The Monte Carlo band only runs on the button. Press it while the fetches are still running and the click holds until the score has caught up, then runs. Cancel stops the worker and keeps the last band. Buttons enable and disable from `status_async()`. |
 | "Right now" tile | `invalidateLater()` inside an async | Refetches current conditions every 60 s in the background. |
 | How it works tab, cache table | `observeAsync()` | Writes each scored forecast to `cache/` from the worker. A `reactivePoll()` lists the files. |
 | Rank all spots tab | `reactiveValAsync()` set from `mirai_async()` | Fetches and scores all ten spots in one worker. `mirai_async()` ships `rank_spots()` and every helper it calls, so nothing is listed by hand. |
 | Compare tab | modules | One module mounted twice, each returning its async reactive to the parent, which combines them in the verdict. |
 | Sidebar task monitor | `status_async()` and `$status()` | Live status of every task in the app. |
-| `server()` | `pool_async(workers = 4)` | Optional: the first task would start a default pool. This call sizes it for every session in the process. |
+| Top of `app.R` | `pool_async(workers = 4, everywhere = )` | Optional: the first task would start a default pool. This call sizes it for every session in the process and preloads each worker with a configured Open-Meteo request (`om_base`) that every fetch in `R/api.R` builds on, instead of configuring one per call. |
 
 ## Lessons learned building this
 
@@ -51,6 +51,12 @@ Set the "Simulated API latency" slider above zero: Open-Meteo answers in about
 - **Use `mirai_async()` for a raw task.** A bare `mirai::mirai()` ships only
   what you hand it; `mirai_async()` ships the helpers an expression calls,
   as `reactiveAsync()` does.
+- **Preload what every task needs.** Objects a task refers to are serialized to
+  the worker on every run. `pool_async(everywhere = )` runs an expression once
+  on every worker when the pool starts; the names it creates are resident
+  there, so tasks neither ship nor see a session copy of them. Call it at the
+  top of `app.R`, not in `server()`, so it runs once per process. Helpers that
+  use a resident object, like `om_get()` here, only work on the pool.
 
 ## Files
 
