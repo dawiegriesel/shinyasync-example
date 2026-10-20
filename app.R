@@ -341,9 +341,9 @@ server <- function(input, output, session) {
       tags$dt(class = "col-sm-4", code("reactiveAsync()"), " × 2"),
       tags$dd(class = "col-sm-8", "Marine and wind fetches. Independent, so they run on two workers at once. Change the spot mid-flight and the old requests are cancelled."),
       tags$dt(class = "col-sm-4", "Chained ", code("reactiveAsync()")),
-      tags$dd(class = "col-sm-8", "The score reads both fetches as a plain reactive() would. shinyasync keeps the previous score while the fetches catch up with a new spot, reports it as running meanwhile, then re-runs it."),
+      tags$dd(class = "col-sm-8", "The score reads both fetches as a plain reactive() would. shinyasync keeps the previous score while the fetches catch up with a new spot, reports it as running meanwhile, drops a score still computing on the old fetches, then re-runs it."),
       tags$dt(class = "col-sm-4", code("bindEvent()"), " + ", code("cancel_async()")),
-      tags$dd(class = "col-sm-8", "The Monte Carlo simulation only runs on the button. Pressed while the fetches are still running, it waits for the score and then runs. Cancel stops the worker and keeps the last band."),
+      tags$dd(class = "col-sm-8", "The Monte Carlo simulation only runs on the button. Pressed while the fetches are still running, it waits for the score and then runs. Cancel stops the worker and keeps the last band, or drops a waiting click."),
       tags$dt(class = "col-sm-4", code("invalidateLater()")),
       tags$dd(class = "col-sm-8", "The 'right now' tile refetches every 60 s in the background."),
       tags$dt(class = "col-sm-4", code("observeAsync()")),
@@ -355,8 +355,13 @@ server <- function(input, output, session) {
       tags$dt(class = "col-sm-4", code("status_async()")),
       tags$dd(class = "col-sm-8", "Drives every badge, the task monitor, the disabled buttons and the 'stale' note."),
       tags$dt(class = "col-sm-4", code("pool_async(everywhere = )")),
-      tags$dd(class = "col-sm-8", "Optional: the first task would start a default pool. This app starts four local daemons at the top of app.R, shared by every session of this process, and preloads each worker with a configured Open-Meteo request that every fetch builds on. Open the app in a second tab: it is never blocked by the first.")
-    )
+      tags$dd(class = "col-sm-8", "Optional: the first task would start a default pool sized to the cores available to the process. This app starts four local daemons at the top of app.R, shared by every session of this process, and preloads each worker with a configured Open-Meteo request that every fetch builds on. Open the app in a second tab: it is never blocked by the first.")
+    ),
+    p(class = "small text-muted",
+      "The package vignette ",
+      a("Side by side with ExtendedTask",
+        href = "https://dawiegriesel.github.io/shinyasync/articles/extendedtask.html", target = "_blank"),
+      " writes this app with ExtendedTask and with shinyasync, one piece at a time.")
   ))
 }
 
