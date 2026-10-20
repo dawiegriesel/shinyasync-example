@@ -44,7 +44,10 @@ ui <- page_navbar(
              "so you can watch tasks run, cancel and supersede each other."),
     hr(),
     sliderInput("nsim", "Simulation draws", 1000, 50000, 10000, step = 1000),
-    uiOutput("sim_buttons"),
+    div(class = "d-grid gap-2",
+        input_task_button("run_sim", "Run uncertainty simulation", icon = icon("dice"),
+                          label_busy = "Simulating..."),
+        uiOutput("cancel_button")),
     hr(),
     h6("Async task monitor"),
     uiOutput("monitor")
@@ -103,8 +106,8 @@ ui <- page_navbar(
         card_header("Fan-out task"),
         p("Fetches and scores all", nrow(spots), "spots in one task started with",
           code("mirai_async()"), "and set on a", code("reactiveValAsync()"), "."),
-        actionButton("rank", "Rank spots for the next 3 days", icon = icon("play"),
-                     class = "btn-primary"),
+        input_task_button("rank", "Rank spots for the next 3 days", icon = icon("play"),
+                          label_busy = "Ranking..."),
         uiOutput("rank_status")
       ),
       card(card_header("Ranking"), plotlyOutput("rank_plot", height = 330),
@@ -158,12 +161,13 @@ server <- function(input, output, session) {
   # 3. Button-triggered heavy work with a cancel button. bindEvent() isolates
   #    everything inside, so only the button re-runs it. Pressed while the
   #    fetches are still running, the click holds and the simulation runs once
-  #    the score has caught up.
+  #    the score has caught up. bind_task_button() keeps the bslib task button
+  #    busy while the task runs, as it would for an ExtendedTask.
   sim <- reactiveAsync({
     s <- simulate_scores(scored(), get_spot(input$spot), n = input$nsim, delay = input$delay)
     attr(s, "spot") <- input$spot
     s
-  }, label = "sim") |> bindEvent(input$run_sim)
+  }, label = "sim") |> bindEvent(input$run_sim) |> bind_task_button("run_sim")
 
   observe(cancel_async(sim)) |> bindEvent(input$cancel_sim)
 
@@ -200,7 +204,8 @@ server <- function(input, output, session) {
 
   # 6. Manual control: a reactiveValAsync() set from an observer. mirai_async()
   #    ships rank_spots() and every helper it calls, like reactiveAsync() does.
-  ranking <- reactiveValAsync()
+  #    The task button follows the value's status like any async object.
+  ranking <- reactiveValAsync() |> bind_task_button("rank")
   observe({
     ranking(mirai_async(rank_spots(spots, days = 3)))
   }) |> bindEvent(input$rank)
@@ -226,13 +231,10 @@ server <- function(input, output, session) {
       lapply(rows, function(r) tags$tr(tags$td(r[1]), tags$td(class = "text-end", status_badge(r[2])))))
   })
 
-  output$sim_buttons <- renderUI({
+  output$cancel_button <- renderUI({
     running <- status_async(sim) == "running"
-    div(class = "d-grid gap-2",
-        actionButton("run_sim", "Run uncertainty simulation", icon = icon("dice"),
-                     class = "btn-primary", disabled = if (running) NA else NULL),
-        actionButton("cancel_sim", "Cancel", icon = icon("ban"),
-                     class = "btn-outline-danger", disabled = if (!running) NA else NULL))
+    actionButton("cancel_sim", "Cancel", icon = icon("ban"),
+                 class = "btn-outline-danger", disabled = if (!running) NA else NULL)
   })
 
   # ---- Forecast tab ---------------------------------------------------------
@@ -342,8 +344,8 @@ server <- function(input, output, session) {
       tags$dd(class = "col-sm-8", "Marine and wind fetches. Independent, so they run on two workers at once. Change the spot mid-flight and the old requests are cancelled."),
       tags$dt(class = "col-sm-4", "Chained ", code("reactiveAsync()")),
       tags$dd(class = "col-sm-8", "The score reads both fetches as a plain reactive() would. shinyasync keeps the previous score while the fetches catch up with a new spot, reports it as running meanwhile, drops a score still computing on the old fetches, then re-runs it."),
-      tags$dt(class = "col-sm-4", code("bindEvent()"), " + ", code("cancel_async()")),
-      tags$dd(class = "col-sm-8", "The Monte Carlo simulation only runs on the button. Pressed while the fetches are still running, it waits for the score and then runs. Cancel stops the worker and keeps the last band, or drops a waiting click."),
+      tags$dt(class = "col-sm-4", code("bindEvent()"), " + ", code("bind_task_button()"), " + ", code("cancel_async()")),
+      tags$dd(class = "col-sm-8", "The Monte Carlo simulation only runs on the button, a bslib task button that stays busy while the task runs. Pressed while the fetches are still running, it waits for the score and then runs. Cancel stops the worker and keeps the last band, or drops a waiting click."),
       tags$dt(class = "col-sm-4", code("invalidateLater()")),
       tags$dd(class = "col-sm-8", "The 'right now' tile refetches every 60 s in the background."),
       tags$dt(class = "col-sm-4", code("observeAsync()")),
@@ -353,7 +355,7 @@ server <- function(input, output, session) {
       tags$dt(class = "col-sm-4", "Modules"),
       tags$dd(class = "col-sm-8", "The Compare tab mounts one module twice; each returns its async reactive to the parent."),
       tags$dt(class = "col-sm-4", code("status_async()")),
-      tags$dd(class = "col-sm-8", "Drives every badge, the task monitor, the disabled buttons and the 'stale' note."),
+      tags$dd(class = "col-sm-8", "Drives every badge, the task monitor, the cancel button and the 'stale' note."),
       tags$dt(class = "col-sm-4", code("pool_async(everywhere = )")),
       tags$dd(class = "col-sm-8", "Optional: the first task would start a default pool sized to the cores available to the process. This app starts four local daemons at the top of app.R, shared by every session of this process, and preloads each worker with a configured Open-Meteo request that every fetch builds on. Open the app in a second tab: it is never blocked by the first.")
     ),

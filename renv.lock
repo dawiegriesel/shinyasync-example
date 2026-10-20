@@ -2309,6 +2309,7 @@
         "shiny (>= 1.8.1)"
       ],
       "Suggests": [
+        "bslib",
         "jsonlite",
         "knitr",
         "rmarkdown",
@@ -2326,8 +2327,8 @@
       "RemoteHost": "api.github.com",
       "RemoteUsername": "dawiegriesel",
       "RemoteRepo": "shinyasync",
-      "RemoteRef": "v0.3.0",
-      "RemoteSha": "b004ada9dd966572f02f3ab6f7244ef94502da50"
+      "RemoteRef": "1d9493d843e3c7f799a55236f6f3a595f4aec865",
+      "RemoteSha": "1d9493d843e3c7f799a55236f6f3a595f4aec865"
     },
     "sourcetools": {
       "Package": "sourcetools",
