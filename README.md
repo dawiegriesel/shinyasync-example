@@ -37,15 +37,16 @@ Set the "Simulated API latency" slider above zero: Open-Meteo answers in about
 | Rank all spots tab | `reactiveValAsync()` set from `mirai_async()` | Fetches and scores all ten spots in one worker. `mirai_async()` ships `rank_spots()` and every helper it calls, so nothing is listed by hand. |
 | Compare tab | modules | One module mounted twice, each returning its async reactive to the parent, which combines them in the verdict. |
 | Sidebar task monitor | `status_async()` and `$status()` | Live status of every task in the app. |
-| Top of `app.R` | `pool_async(workers = 4, everywhere = )` | Optional: the first task would start a default pool, sized to the cores available to the process, including a container's CPU limit. This call sizes it for every session in the process and preloads each worker with a configured Open-Meteo request (`om_base`) that every fetch in `R/api.R` builds on, instead of configuring one per call. `print(marine)` in `server()` lists `om_base` on a `resident` line. |
+| Top of `app.R` | `pool_async(workers = 4, everywhere = )` | Optional: the first task would start a default pool, sized to the cores available to the process, including a container's CPU limit. This call sizes it for every session in the process and preloads each worker with a configured Open-Meteo request (`om_base`) that every fetch in `R/api.R` builds on, instead of configuring one per call. |
 
 ## Lessons learned building this
 
-- **An async reactive starts its task the first time it is read.** The trigger
-  observer is created suspended. A pattern like "only read `sim()` once
-  `status_async(sim) == "success"`" therefore never starts the task. Read it
-  unconditionally and catch the `shiny.silent.error` halt when there is no
-  value yet (see `sim_band` in `app.R`).
+- **Reading an async reactive with no value halts like `req()`.** `sim` has
+  no value until the button fires, so an output that reads it would render
+  nothing. Read it anyway and catch the `shiny.silent.error` halt when there is
+  no value yet (see `sim_band` in `app.R`), so the score plot renders without
+  a band. The task starts on the first read, or the first `status_async()`
+  call, whichever comes first.
 - **Chains need no guard.** With stale-while-revalidate an upstream returns its
   previous value while it recomputes, but a downstream `reactiveAsync()` waits
   for it to catch up with its own inputs, so the score never pairs a new spot

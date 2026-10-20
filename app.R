@@ -167,9 +167,9 @@ server <- function(input, output, session) {
 
   observe(cancel_async(sim)) |> bindEvent(input$cancel_sim)
 
-  # An async reactive starts its task the first time it is read, so something
-  # must read it even before it has a value. Reading it while it has no value
-  # halts like req(); catch that and treat it as "no band yet".
+  # Reading an async reactive that has no value yet halts like req(), and sim
+  # has none until the button fires. Catch the halt and treat it as "no band
+  # yet", so the score plot renders without a band.
   sim_band <- reactive(tryCatch(sim(), shiny.silent.error = function(e) NULL))
 
   # 4. Background refresh: invalidateLater() runs on the session thread and
