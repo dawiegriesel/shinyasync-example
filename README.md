@@ -37,7 +37,7 @@ Set the "Simulated API latency" slider above zero: Open-Meteo answers in about
 | Rank all spots tab | `reactiveValAsync()` set from `mirai_async()` | Fetches and scores all ten spots in one worker. `mirai_async()` ships `rank_spots()` and every helper it calls, so nothing is listed by hand. The task button is bound to the value, so it stays busy until the ranking arrives. |
 | Compare tab | modules | One module mounted twice, each returning its async reactive to the parent, which combines them in the verdict. |
 | Sidebar task monitor | `status_async()` and `$status()` | Live status of every task in the app. |
-| Top of `app.R` | `pool_async(workers = 4, everywhere = )` | Optional: the first task would start a default pool, sized to the cores available to the process, including a container's CPU limit. This call sizes it for every session in the process and preloads each worker with a configured Open-Meteo request (`om_base`) that every fetch in `R/api.R` builds on, instead of configuring one per call. |
+| Top of `app.R` | `pool_async(workers = 4, everywhere = )` | Optional: the first task would start a default pool, sized to the cores available to the process, including a container's CPU limit. This call sizes it for every session in the process and preloads each worker with a configured Open-Meteo request (`om_base`) that every fetch in `R/api.R` builds on, instead of configuring one per call. `print(marine)` in `server()` lists `om_base` on a `resident` line. |
 
 ## Lessons learned building this
 
