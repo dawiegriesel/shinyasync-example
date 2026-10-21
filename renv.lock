@@ -2328,7 +2328,7 @@
       "RemoteUsername": "dawiegriesel",
       "RemoteRepo": "shinyasync",
       "RemoteRef": "v0.4.0",
-      "RemoteSha": "21eef8d9ebc05fbcd0457c75ec79b1542a6cf21f"
+      "RemoteSha": "b254bf132238939b489975a1fdd90c8ce2307ad6"
     },
     "sourcetools": {
       "Package": "sourcetools",
